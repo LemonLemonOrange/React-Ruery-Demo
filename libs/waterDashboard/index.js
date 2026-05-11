@@ -1,6 +1,7 @@
 export * from './wraApi';
 export * from './basic';
 export * from './disaster';
+export * from './drought';
 export * from './event';
 export * from './floodDefense';
 export * from './rain';

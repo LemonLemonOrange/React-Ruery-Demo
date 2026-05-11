@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 export const wraApi = axios.create({
-  baseURL: 'https://fhy.wra.gov.tw/WraApi',
+  // 透過 Vite proxy (/WraApi → https://fhy.wra.gov.tw/WraApi) 避免 CORS
+  baseURL: '/WraApi',
 });
 
 /**
