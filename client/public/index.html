@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPC Automation Error Demo - HRESULT E_FAIL 解決方案</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .main-content {
+            padding: 2rem;
+        }
+        
+        .demo-section {
+            margin-bottom: 2rem;
+        }
+        
+        .demo-section h2 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+        }
+        
+        .test-form {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn.btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        
+        .btn.btn-warning {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+        
+        .results {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            background: #ecf0f1;
+        }
+        
+        .results.error {
+            border-left-color: #e74c3c;
+            background: #fadbd8;
+        }
+        
+        .results.success {
+            border-left-color: #27ae60;
+            background: #d5f4e6;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-details {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+        
+        .solutions {
+            margin-top: 1rem;
+        }
+        
+        .solution-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .solution-item h4 {
+            color: #2980b9;
+            margin-bottom: 0.5rem;
+        }
+        
+        .solution-steps {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .solution-steps li {
+            padding: 0.25rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        
+        .solution-steps li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .quick-tests {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .quick-test-card {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .quick-test-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .quick-test-card h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        
+        .quick-test-card p {
+            color: #7f8c8d;
+            margin-bottom: 1rem;
+        }
+        
+        .diagnostics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .diagnostics-table th,
+        .diagnostics-table td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        
+        .diagnostics-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .status-passed {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .status-failed {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .status-warning {
+            color: #f39c12;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 OPC Automation Error Demo</h1>
+            <p>HRESULT E_FAIL 錯誤解決方案演示 / HRESULT E_FAIL Error Solutions Demo</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- Quick Test Cards -->
+            <div class="demo-section">
+                <h2>🚀 快速測試 / Quick Tests</h2>
+                <div class="quick-tests">
+                    <div class="quick-test-card">
+                        <h3>✅ 成功案例</h3>
+                        <p>測試成功的 OPC 連接</p>
+                        <button class="btn" onclick="quickTest('localhost')">測試 localhost</button>
+                    </div>
+                    <div class="quick-test-card">
+                        <h3>❌ HRESULT E_FAIL</h3>
+                        <p>模擬 DCOM 配置錯誤</p>
+                        <button class="btn btn-danger" onclick="quickTest('dcom-error')">模擬錯誤</button>
+                    </div>
+                    <div class="quick-test-card">
+                        <h3>🚫 Access Denied</h3>
+                        <p>模擬權限被拒絕錯誤</p>
+                        <button class="btn btn-warning" onclick="quickTest('access-denied')">測試權限</button>
+                    </div>
+                    <div class="quick-test-card">
+                        <h3>⏱️ Timeout</h3>
+                        <p>模擬連接超時</p>
+                        <button class="btn btn-warning" onclick="quickTest('timeout-host')">測試超時</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Custom Test Form -->
+            <div class="demo-section">
+                <h2>🔍 自定義測試 / Custom Test</h2>
+                <div class="test-form">
+                    <div class="form-group">
+                        <label for="hostname">主機名或 IP 地址 / Hostname or IP Address:</label>
+                        <input type="text" id="hostname" placeholder="例如: localhost, 192.168.1.100" value="localhost">
+                    </div>
+                    <div class="form-group">
+                        <label for="testType">測試類型 / Test Type:</label>
+                        <select id="testType">
+                            <option value="servers">獲取 OPC 服務器列表 / Get OPC Servers</option>
+                            <option value="diagnose">運行診斷 / Run Diagnostics</option>
+                            <option value="connection">測試連接 / Test Connection</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="runCustomTest()">🚀 運行測試 / Run Test</button>
+                    <button class="btn" onclick="clearResults()">🧹 清除結果 / Clear Results</button>
+                </div>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>正在執行測試... / Running test...</p>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="demo-section">
+                <h2>📊 測試結果 / Test Results</h2>
+                <div id="results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        async function quickTest(hostname) {
+            await runTest(hostname, 'servers');
+        }
+        
+        async function runCustomTest() {
+            const hostname = document.getElementById('hostname').value.trim();
+            const testType = document.getElementById('testType').value;
+            
+            if (!hostname) {
+                showError('請輸入主機名 / Please enter a hostname');
+                return;
+            }
+            
+            await runTest(hostname, testType);
+        }
+        
+        async function runTest(hostname, testType) {
+            showLoading(true);
+            clearResults();
+            
+            try {
+                let result;
+                
+                switch (testType) {
+                    case 'servers':
+                        result = await getOPCServers(hostname);
+                        break;
+                    case 'diagnose':
+                        result = await runDiagnostics(hostname);
+                        break;
+                    case 'connection':
+                        result = await testConnection(hostname);
+                        break;
+                    default:
+                        throw new Error('Invalid test type');
+                }
+                
+                displayResult(result, testType);
+                
+            } catch (error) {
+                showError(`測試失敗 / Test failed: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function getOPCServers(hostname) {
+            const response = await fetch(`${API_BASE}/opc/servers/${encodeURIComponent(hostname)}`);
+            return await response.json();
+        }
+        
+        async function runDiagnostics(hostname) {
+            const response = await fetch(`${API_BASE}/opc/diagnose`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hostname })
+            });
+            return await response.json();
+        }
+        
+        async function testConnection(hostname) {
+            const response = await fetch(`${API_BASE}/opc/test-connection`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hostname })
+            });
+            return await response.json();
+        }
+        
+        function displayResult(result, testType) {
+            const resultsDiv = document.getElementById('results');
+            let html = '';
+            
+            if (result.success) {
+                html += `<div class="results success">`;
+                html += `<h3>✅ 測試成功 / Test Successful</h3>`;
+                
+                switch (testType) {
+                    case 'servers':
+                        html += `<p><strong>主機名 / Hostname:</strong> ${result.hostname}</p>`;
+                        html += `<p><strong>找到的服務器 / Found Servers:</strong> ${result.servers.length}</p>`;
+                        if (result.servers.length > 0) {
+                            html += `<ul>`;
+                            result.servers.forEach(server => {
+                                html += `<li>${server}</li>`;
+                            });
+                            html += `</ul>`;
+                        }
+                        break;
+                    case 'connection':
+                        html += `<p><strong>連接時間 / Connection Time:</strong> ${result.result.duration}ms</p>`;
+                        html += `<h4>測試步驟 / Test Steps:</h4>`;
+                        html += `<table class="diagnostics-table">`;
+                        html += `<tr><th>步驟 / Step</th><th>狀態 / Status</th><th>消息 / Message</th></tr>`;
+                        result.result.steps.forEach(step => {
+                            const statusClass = step.success ? 'status-passed' : 'status-failed';
+                            html += `<tr><td>${step.step}</td><td class="${statusClass}">${step.success ? 'PASS' : 'FAIL'}</td><td>${step.message}</td></tr>`;
+                        });
+                        html += `</table>`;
+                        break;
+                }
+                
+                html += `</div>`;
+            } else {
+                html += `<div class="results error">`;
+                html += `<h3>❌ 測試失敗 / Test Failed</h3>`;
+                
+                if (result.error) {
+                    html += `<div class="error-details">`;
+                    html += `錯誤代碼 / Error Code: ${result.error.code}\n`;
+                    html += `錯誤類型 / Error Type: ${result.error.type}\n`;
+                    html += `錯誤消息 / Error Message: ${result.error.message}`;
+                    html += `</div>`;
+                    
+                    // Display solutions if available
+                    if (result.solutions && result.solutions.length > 0) {
+                        html += `<div class="solutions">`;
+                        html += `<h4>💡 解決方案 / Solutions:</h4>`;
+                        result.solutions.forEach(solution => {
+                            html += `<div class="solution-item">`;
+                            html += `<h4>${solution.title} / ${solution.titleChinese}</h4>`;
+                            html += `<ul class="solution-steps">`;
+                            solution.steps.forEach((step, index) => {
+                                const chineseStep = solution.stepsChinese[index] || step;
+                                html += `<li>${step} / ${chineseStep}</li>`;
+                            });
+                            html += `</ul>`;
+                            html += `</div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
+                    // Display recommendations
+                    if (result.recommendations && result.recommendations.length > 0) {
+                        html += `<div class="solutions">`;
+                        html += `<h4>📋 建議 / Recommendations:</h4>`;
+                        html += `<ul class="solution-steps">`;
+                        result.recommendations.forEach(rec => {
+                            html += `<li>${rec}</li>`;
+                        });
+                        html += `</ul>`;
+                        html += `</div>`;
+                    }
+                }
+                
+                html += `</div>`;
+            }
+            
+            // Handle diagnostics result
+            if (testType === 'diagnose' && result.diagnostics) {
+                const diag = result.diagnostics;
+                html += `<div class="results">`;
+                html += `<h3>🔧 診斷結果 / Diagnostic Results</h3>`;
+                html += `<p><strong>總結 / Summary:</strong> ${diag.summary.passed} 通過, ${diag.summary.failed} 失敗, ${diag.summary.warnings} 警告</p>`;
+                
+                if (diag.tests) {
+                    html += `<table class="diagnostics-table">`;
+                    html += `<tr><th>測試 / Test</th><th>狀態 / Status</th><th>消息 / Message</th></tr>`;
+                    Object.values(diag.tests).forEach(test => {
+                        let statusClass = 'status-passed';
+                        let statusText = 'PASS';
+                        if (!test.passed) {
+                            statusClass = test.warning ? 'status-warning' : 'status-failed';
+                            statusText = test.warning ? 'WARN' : 'FAIL';
+                        }
+                        html += `<tr><td>${test.name}</td><td class="${statusClass}">${statusText}</td><td>${test.message}</td></tr>`;
+                    });
+                    html += `</table>`;
+                }
+                
+                if (diag.recommendations && diag.recommendations.length > 0) {
+                    html += `<h4>📋 建議 / Recommendations:</h4>`;
+                    html += `<ul class="solution-steps">`;
+                    diag.recommendations.forEach(rec => {
+                        html += `<li>${rec}</li>`;
+                    });
+                    html += `</ul>`;
+                }
+                
+                html += `</div>`;
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function showError(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<div class="results error"><h3>❌ 錯誤 / Error</h3><p>${message}</p></div>`;
+        }
+        
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            loading.style.display = show ? 'block' : 'none';
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        // Test API connectivity on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const health = await response.json();
+                console.log('API Health:', health);
+            } catch (error) {
+                showError('無法連接到 API 服務器。請確保服務器正在運行。/ Cannot connect to API server. Please ensure server is running.');
+            }
+        });
+    </script>
+</body>
+</html>
